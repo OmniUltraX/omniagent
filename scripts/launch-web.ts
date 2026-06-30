@@ -44,11 +44,21 @@ function shutdown(exitCode = 0): void {
 process.on("SIGINT", () => shutdown(0));
 process.on("SIGTERM", () => shutdown(0));
 
-console.error("[launch-web] 启动 web 模式（API 9477 + UI 9478）…");
+console.error("[launch-web] 启动 web 模式（Mock OmniMCP + API 9477 + UI 9478）…");
 console.error("[launch-web] 浏览器打开 http://127.0.0.1:9478");
 
-spawnTracked("web-api", "node", ["--import", "tsx", "index.ts", "--mode", "web"], agentRoot);
+// 先启动 Mock OmniMCP（12756），替代真实 OmniPanel 内置 MCP。
+spawnTracked(
+  "mock-omnimcp",
+  "node",
+  ["--import", "tsx", "scripts/mock-omnimcp.ts"],
+  agentRoot,
+);
+
+setTimeout(() => {
+  spawnTracked("web-api", "node", ["--import", "tsx", "index.ts", "--mode", "web"], agentRoot);
+}, 500);
 
 setTimeout(() => {
   spawnTracked("dev-ui", "npm", ["run", "dev", "--prefix", "dev-ui"], agentRoot);
-}, 800);
+}, 1200);
