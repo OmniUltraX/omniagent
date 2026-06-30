@@ -1,3 +1,4 @@
 debug-config.json
+node_modules/
 /dev-ui/node_modules/
 /dev-ui/dist/
