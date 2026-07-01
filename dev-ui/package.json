@@ -12,6 +12,7 @@
     "@assistant-ui/react": "^0.14.23",
     "@assistant-ui/react-markdown": "^0.14.4",
     "lucide-react": "^1.21.0",
+    "omniagent": "file:..",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
   },

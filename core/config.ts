@@ -14,6 +14,8 @@ export type OmniAgentConfigFile = {
   apiStandard: "openai" | "anthropic";
   /** 为 true 时对 OpenAI 兼容 API 传递 enable_thinking（DashScope 等思考模型）。默认 true。 */
   enableThinking?: boolean;
+  /** OmniPanel 本地数据库绝对路径（web 调试时由 debug-config.json 指定）。 */
+  omniDatabase?: string;
   mcpServers?: McpServer[];
 };
 
@@ -63,14 +65,21 @@ export function loadAgentConfigFile(forceReload = false): OmniAgentConfigFile | 
       baseUrl,
       apiStandard: parsed.apiStandard === "anthropic" ? "anthropic" : "openai",
       enableThinking: parsed.enableThinking !== false,
+      omniDatabase: parsed.omniDatabase?.trim()
+        ? path.resolve(parsed.omniDatabase.trim())
+        : undefined,
       mcpServers: Array.isArray(parsed.mcpServers) ? parsed.mcpServers : [],
     };
+    if (cachedConfig.omniDatabase && !fs.existsSync(cachedConfig.omniDatabase)) {
+      log("警告: omniDatabase 文件不存在:", cachedConfig.omniDatabase);
+    }
     log(
       "已加载配置:",
       path.basename(configPath),
       cachedConfig.model,
       "mcp=",
       cachedConfig.mcpServers?.length ?? 0,
+      cachedConfig.omniDatabase ? `db=${path.basename(cachedConfig.omniDatabase)}` : "db=未配置",
     );
     return cachedConfig;
   } catch (error) {
@@ -86,17 +95,28 @@ export function resolveMcpServersFromConfig(): McpServer[] {
   return config?.mcpServers ?? [];
 }
 
+/** 从配置文件读取 OmniPanel 本地数据库绝对路径。 */
+export function resolveOmniDatabaseFromConfig(): string | null {
+  const config = loadAgentConfigFile(true);
+  return config?.omniDatabase ?? null;
+}
+
 /** 将配置应用到进程环境变量，供 LangChain / DeepAgents 使用。 */
 export function applyAgentConfigToEnv(config: OmniAgentConfigFile): void {
   if (config.apiStandard === "anthropic") {
     process.env.ANTHROPIC_API_KEY = config.apiKey;
     process.env.ANTHROPIC_BASE_URL = config.baseUrl;
-    return;
+  } else {
+    process.env.OPENAI_API_KEY = config.apiKey;
+    process.env.OPENAI_BASE_URL = config.baseUrl;
+    process.env.OPENAI_API_BASE = config.baseUrl;
   }
 
-  process.env.OPENAI_API_KEY = config.apiKey;
-  process.env.OPENAI_BASE_URL = config.baseUrl;
-  process.env.OPENAI_API_BASE = config.baseUrl;
+  if (config.omniDatabase) {
+    process.env.OMNIPANEL_DATABASE = config.omniDatabase;
+  } else {
+    delete process.env.OMNIPANEL_DATABASE;
+  }
 }
 
 /** LangChain model 字符串，例如 openai:gpt-4o-mini */
@@ -122,7 +142,9 @@ export async function createChatModelFromConfig(
     apiKey: config.apiKey,
     configuration: { baseURL: config.baseUrl },
   };
-  if (config.enableThinking !== false) {
+  const isOllamaCompat =
+    /:11434(\/|$)/.test(config.baseUrl) || /ollama/i.test(config.baseUrl);
+  if (config.enableThinking !== false && !isOllamaCompat) {
     openAiOptions.modelKwargs = { enable_thinking: true };
   }
   return initChatModel(modelId, openAiOptions);
