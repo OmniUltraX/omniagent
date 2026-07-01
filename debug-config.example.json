@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "model": "qwen-plus",
+  "apiKey": "YOUR_API_KEY",
+  "baseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  "apiStandard": "openai",
+  "enableThinking": true,
+  "omniDatabase": "C:/Users/<you>/AppData/Roaming/OmniPanel/omnipanel.db",
+  "mcpServers": []
+}

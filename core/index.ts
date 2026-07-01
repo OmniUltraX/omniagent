@@ -5,6 +5,7 @@ export {
   loadAgentConfigFile,
   resolveLangChainModelId,
   resolveMcpServersFromConfig,
+  resolveOmniDatabaseFromConfig,
 } from "./config.js";
 
 export type { SessionRuntime } from "./runtime.js";
